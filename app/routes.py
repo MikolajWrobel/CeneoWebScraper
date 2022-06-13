@@ -1,3 +1,4 @@
+from pstats import Stats
 from app import app
 from flask import render_template, redirect, url_for
 import requests
@@ -7,76 +8,22 @@ import os
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from app.models.product import Product
 
+@app.route('/')
+def index():
+    return render_template("index.html.jinja")
 
+@app.route('/extract', methods=["POST", "GET"])
+def extract():
+    if requests.method == "POST":
+        product_id = requests.form.get("product_id")
+        product = Product(product_id)
+        product.extract_product()
 
-
-
-def get_item(ancestor, selector, attribute=None, return_list=False):
-    try:
-        if return_list:
-            return [item.get_text().strip() for item in ancestor.select(selector)]
-        if attribute:
-            return ancestor.select_one(selector)[attribute]
-        return ancestor.select_one(selector).get_text().strip()
-    except (AttributeError, TypeError):
-        return None
-
-selectors = {
-    "author": ["span.user-post__author-name"],
-    "recommendation": ["span.user-post__author-recomendation > em"],
-    "stars": ["span.user-post__score-count"],
-    "content": ["div.user-post__text"],
-    "useful": ["button.vote-yes > span"],
-    "useless": ["button.vote-no > span"],
-    "publish_date": ["span.user-post__published > time:nth-child(1)", "datetime"],
-    "purchase_date": ["span.user-post__published > time:nth-child(2)", "datetime"],
-    "pros": ["div[class$=positives]~ div.review-feature__item", None, True],
-    "cons": ["div[class$=negatives]~ div.review-feature__item", None, True]
-}
-
-
-def get_item(ancestor, selector, attribute=None, return_list=False):
-    try:
-        if return_list:
-            return [item.get_text().strip() for item in ancestor.select(selector)]
-        if attribute:
-            return ancestor.select_one(selector)[attribute]
-        return ancestor.select_one(selector).get_text().strip()
-    except (AttributeError, TypeError):
-        return None
-
-@app.route('/extract/<product_id>')
-def extract(product_id):
-    url = "https://www.ceneo.pl/"+id+"#tab=reviews"
-    all_opinions = []
-    while(url):
-        response = requests.get(url)
-
-        page = BeautifulSoup(response.text, 'html.parser')
-
-        opinions = page.select("div.js_product-review")
-        for opinion in opinions:
-
-            single_opinion = {
-                key:get_item(opinion, *value)
-                for key, value in selectors.items()
-            }
-            single_opinion["opinion_id"] = opinion["data-entry-id"]
-            all_opinions.append(single_opinion)
-       
-        try:
-            url = "https://www.ceneo.pl"+get_item(page, "a.pagination__next", "href")
-        except TypeError:
-            url = None
-        if not os.path.exists("app/opinions"):
-            os.makedirs("app/opinions")
-        
-    with open("opinions/"+id+".json", "w", encoding="UTF-8") as jf:
-        json.dump(all_opinions, jf, indent=4, ensure_ascii=False)
-
-    return redirect(url_for("product", product_id=product_id))
-
+        return redirect(url_for("product", product_id=product_id))
+    else:
+        return render_template("extract.html.jinja")
 
 @app.route('/products')
 def products():
@@ -92,14 +39,6 @@ def author():
 def product(product_id):
     opinions = pd.read_json(f"app/opinions/{id}.json")
     opinions.stars = opinions.stars.map(lambda x: float(x.split("/")[0].replace(",",".")))
-    stats = {
-        "opinions_count": len(opinions.index),
-        "pros_count": opinions.pros.map(bool).sum(),
-        "cons_count": opinions.cons.map(bool).sum(),
-        "average_score": opinions.stars.mean().round(2),
-
-    }
-
 
     recommendation = opinions.recommendation.value_counts(dropna = False).sort_index().reindex(["Polecam", None, "Nie Polecam"])
     recommendation.plot.pie(
