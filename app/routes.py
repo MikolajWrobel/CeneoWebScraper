@@ -16,7 +16,7 @@ def index():
 
 @app.route('/extract', methods=["POST", "GET"])
 def extract():
-    if requests.method == "POST":
+    if requests.models == "POST":
         product_id = requests.form.get("product_id")
         product = Product(product_id)
         product.extract_product()
@@ -27,7 +27,7 @@ def extract():
 
 @app.route('/products')
 def products():
-    products = [filename.split(".")[0] for filename in os.listdir("./opinions")]
+    products = [filename.split(".")[0] for filename in os.listdir("./app/opinions")]
     return render_template("products.html.jinja", products=products)
 
 @app.route('/author')

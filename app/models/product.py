@@ -24,7 +24,21 @@ class Product:
         pass
 
     def to_dict(self):
-        pass
+        opinion_dict = {
+            "author": self.author,
+            "recommendation": self.recommendation,
+            "stars": self.stars,
+            "content": self.content,
+            "useful": self.useful,
+            "useless": self.useless,
+            "publish_date": self.publish_date,
+            "purchase_date": self.purchase_date,
+            "pros_count": self.pros_count,
+            "cons_count": self.cons_count,
+            "opinion_id": self.opinion_id
+        }
+        return opinion_dict
+        
 
     def extract_product(self):
         url = f"https://www.ceneo.pl/{self.product_id}#tab=reviews"
@@ -41,7 +55,8 @@ class Product:
                 url = "https://www.ceneo.pl"+get_item(page,"a.pagination__next","href")
             except TypeError:
                 url = None
-    
+        return self
+
     def process_stats(self):
         opinions = pd.read_json(json.dumps(self.opinions)) 
         self.opinions_count = len(self.opinions.index),
@@ -55,9 +70,11 @@ class Product:
             os.makedirs("app/opinions")
         with open(f"app/opinions/{self.product_id}.json", "w", encoding="UTF-8") as jf:
             json.dump(self.opinions, jf, indent=4, ensure_ascii=False)
-    
+        return self
+
     def save_stats(self):        
         if not os.path.exists("app/products"):
             os.makedirs("app/products")
         with open(f"app/products/{self.product_id}.json", "w", encoding="UTF-8") as jf:
             json.dump(self.opinions, jf, indent=4, ensure_ascii=False)
+        return self
